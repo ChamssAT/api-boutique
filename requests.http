@@ -1,0 +1,108 @@
+# =============================================================================
+# requests.http — tests manuels avec l'extension REST Client de VS Code
+# -----------------------------------------------------------------------------
+# Ouvrir ce fichier dans VS Code, cliquer sur "Send Request" au-dessus de
+# chaque bloc. Aucune installation supplémentaire.
+# =============================================================================
+
+@origin = http://localhost:3000
+@base = {{origin}}/api/v1/products
+
+### Santé — attendu : 200 { "status": "ok" }
+GET {{origin}}/health
+
+### Créer — attendu : 201 + en-tête Location
+POST {{base}}
+Content-Type: application/json
+
+{
+  "name": "Mil 50 kg",
+  "price": 22000,
+  "category": "cereales",
+  "stock": 12
+}
+
+### Lister — attendu : 200
+GET {{base}}
+
+### Lister la catégorie céréales — attendu : 200
+GET {{base}}?category=cereales&page=1&limit=10
+
+### Exercice 4.2 — filtres + tri — attendu : 200, du plus cher au moins cher
+GET {{base}}?minPrice=10000&maxPrice=30000&sort=-price
+
+### Exercice 4.2 — minPrice non numérique — attendu : 400 VALIDATION_ERROR
+GET {{base}}?minPrice=abc
+
+### Exercice 4.2 — intervalle incohérent — attendu : 400 + message clair
+GET {{base}}?minPrice=50000&maxPrice=10000
+
+### Mass assignment — attendu : 400 VALIDATION_ERROR
+POST {{base}}
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "price": 100,
+  "category": "fruits",
+  "stock": 1,
+  "role": "admin"
+}
+
+### Identifiant invalide — attendu : 400
+GET {{base}}/123
+
+### JSON cassé — attendu : 400 INVALID_JSON
+POST {{base}}
+Content-Type: application/json
+
+{ "name": "oubli d'accolade"
+
+### Produit inconnu — attendu : 404 PRODUCT_NOT_FOUND
+GET {{base}}/00000000-0000-4000-8000-000000000000
+
+### Route inconnue — attendu : 404 ROUTE_NOT_FOUND
+GET {{origin}}/api/v1/inconnu
+
+### ============================================================================
+### Exercice 4.3 — la vente
+### 1) Créer un produit avec stock = 5, puis copier son id ci-dessous.
+### ============================================================================
+@produitId = COLLER-UN-UUID-ICI
+
+### Vente valide — attendu : 200, stock 5 -> 2
+POST {{base}}/{{produitId}}/sales
+Content-Type: application/json
+
+{ "quantity": 3 }
+
+### Vente supérieure au stock — attendu : 409 INSUFFICIENT_STOCK
+POST {{base}}/{{produitId}}/sales
+Content-Type: application/json
+
+{ "quantity": 99 }
+
+### Quantité nulle — attendu : 400 VALIDATION_ERROR
+POST {{base}}/{{produitId}}/sales
+Content-Type: application/json
+
+{ "quantity": 0 }
+
+### Quantité non entière — attendu : 400 VALIDATION_ERROR
+POST {{base}}/{{produitId}}/sales
+Content-Type: application/json
+
+{ "quantity": 1.5 }
+
+### Produit inconnu — attendu : 404 PRODUCT_NOT_FOUND
+POST {{base}}/00000000-0000-4000-8000-000000000000/sales
+Content-Type: application/json
+
+{ "quantity": 1 }
+
+### ============================================================================
+### Exercice 4.4 — le corps géant
+### REST Client ne sait pas générer 200 000 caractères facilement.
+### Utilise plutôt : ./scripts/attaques.sh
+### (ou la commande curl commentée dans CORRECTIONS.md, section 7.2)
+### ============================================================================

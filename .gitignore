@@ -1,0 +1,9 @@
+# Dépendances : jamais dans le dépôt
+node_modules/
+
+# Secrets et configuration locale
+.env
+
+# Logs et fichiers temporaires
+*.log
+.DS_Store
